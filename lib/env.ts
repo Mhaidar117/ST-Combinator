@@ -5,9 +5,14 @@ const envSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   OPENAI_API_KEY: z.string().min(1),
-  STRIPE_SECRET_KEY: z.string().min(1),
-  STRIPE_WEBHOOK_SECRET: z.string().min(1),
-  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(1),
+  // Stripe is optional in deployments that don't enable the upgrade flow.
+  // The /api/stripe/checkout route detects placeholder/missing values and
+  // returns a clean 503 instead of crashing.
+  STRIPE_SECRET_KEY: z.string().default("sk_test_placeholder"),
+  STRIPE_WEBHOOK_SECRET: z.string().default("whsec_placeholder"),
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z
+    .string()
+    .default("pk_test_placeholder"),
   NEXT_PUBLIC_SITE_URL: z.string().url(),
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: z.string().optional(),
