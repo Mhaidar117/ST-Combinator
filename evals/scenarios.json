@@ -1,0 +1,174 @@
+[
+  {
+    "id": "strong-vertical-saas",
+    "category": "strong_idea",
+    "label": "Strong vertical-SaaS idea",
+    "brief": {
+      "name": "ClinicSched",
+      "oneLiner": "Independent dental clinics replace 4 disconnected scheduling tools with one calendar that fills cancellations automatically.",
+      "problem": "Solo and small dental offices lose 12-18% of chair time to last-minute cancellations and patchwork scheduling tools that do not talk to each other.",
+      "targetCustomer": "Owner-operators of US dental clinics with 1-5 chairs.",
+      "whyNow": "Modern dental practice management APIs (e.g. Open Dental, Dentrix Ascend) are finally accessible, and SMS confirmation conversion has crossed 70%.",
+      "pricingModel": "$249/chair/month flat, no setup fee.",
+      "goToMarket": "Co-sell with Open Dental partners; founder-led outbound to state dental associations.",
+      "competitors": ["NexHealth", "Weave", "RevenueWell"],
+      "unfairAdvantage": "Founder ran a 4-clinic dental group for 6 years and has a 200-practice waitlist from prior product.",
+      "stage": "mvp"
+    },
+    "expectations": {
+      "verdictMustNotInclude": ["clone", "dead", "kill"],
+      "minSurviveReasons": 2,
+      "verdictAllow": []
+    }
+  },
+  {
+    "id": "vague-ai-platform",
+    "category": "vague_idea",
+    "label": "Vague \"AI platform\" pitch",
+    "brief": {
+      "name": "InsightAI",
+      "oneLiner": "An AI platform that helps businesses make better decisions.",
+      "problem": "Companies struggle to use their data effectively.",
+      "targetCustomer": "Mid-market and enterprise.",
+      "whyNow": "AI is exploding.",
+      "pricingModel": "Custom enterprise pricing.",
+      "goToMarket": "Outbound sales and partnerships.",
+      "competitors": ["everyone"],
+      "unfairAdvantage": "Our team is great at AI.",
+      "stage": "idea"
+    },
+    "expectations": {
+      "minAssumptionsFragility": 7,
+      "minKillReasons": 3,
+      "verdictAllow": ["dead", "weak", "vague", "unclear", "thin", "scope"]
+    }
+  },
+  {
+    "id": "contradictory-pricing-vs-customer",
+    "category": "contradictory",
+    "label": "Internal contradiction (price vs. customer)",
+    "brief": {
+      "name": "FreelancerOS",
+      "oneLiner": "$2,000/month all-in-one back-office for solo freelancers earning under $40k/year.",
+      "problem": "Solo freelancers waste hours on invoicing, taxes, and proposals.",
+      "targetCustomer": "Independent solo freelancers in design, writing, or coaching with under $40k annual revenue.",
+      "whyNow": "Gig-economy growth and AI-assisted bookkeeping make this viable.",
+      "pricingModel": "$2,000/month flat subscription, no free tier.",
+      "goToMarket": "Paid acquisition on TikTok and Instagram targeting freelancer communities.",
+      "competitors": ["Bonsai", "HoneyBook", "FreshBooks"],
+      "unfairAdvantage": "First true 'all-in-one' for solos.",
+      "stage": "idea"
+    },
+    "expectations": {
+      "minContradictions": 1,
+      "contradictionMinSeverity": "medium",
+      "minKillReasons": 2
+    }
+  },
+  {
+    "id": "no-moat-clone",
+    "category": "no_moat",
+    "label": "No-moat clone",
+    "brief": {
+      "name": "TaskPro",
+      "oneLiner": "A simpler, prettier Notion for project management.",
+      "problem": "Notion is too complex and Asana is too rigid.",
+      "targetCustomer": "Small teams (2-20 people) doing knowledge work.",
+      "whyNow": "Productivity tools are saturated but people complain about complexity.",
+      "pricingModel": "$8/user/month.",
+      "goToMarket": "Product Hunt launch + content marketing.",
+      "competitors": ["Notion", "Asana", "ClickUp", "Linear", "Coda", "Monday"],
+      "unfairAdvantage": "Better UX.",
+      "stage": "mvp"
+    },
+    "expectations": {
+      "killReasonsMustMatch": ["moat|defensib|differentiat|competit|UX is not a moat|undifferentiat"],
+      "minKillReasons": 3,
+      "verdictAllow": ["clone", "dead", "weak", "no moat", "undifferentiated"]
+    }
+  },
+  {
+    "id": "technical-feasibility-risk",
+    "category": "technical_risk",
+    "label": "Technical-feasibility risk",
+    "brief": {
+      "name": "QuantumLearn",
+      "oneLiner": "A quantum-computing-powered language tutor that teaches any language in 7 days.",
+      "problem": "Language learning is slow.",
+      "targetCustomer": "Adult professionals learning a second language.",
+      "whyNow": "Quantum hardware is becoming accessible via cloud APIs.",
+      "pricingModel": "$99/month.",
+      "goToMarket": "Influencer partnerships.",
+      "competitors": ["Duolingo", "Babbel"],
+      "unfairAdvantage": "Patent-pending quantum NLP algorithm.",
+      "stage": "idea"
+    },
+    "expectations": {
+      "killReasonsMustMatch": ["technical|feasib|quantum|claim|hardware"],
+      "minKillReasons": 2
+    }
+  },
+  {
+    "id": "niche-b2b",
+    "category": "niche_b2b",
+    "label": "Niche B2B with real wedge",
+    "brief": {
+      "name": "RailMonitor",
+      "oneLiner": "API-first defect-detection for short-line freight railroads using existing track-side cameras.",
+      "problem": "Class III freight railroads (~600 in the US) cannot afford the inspection drones used by Class I, so defects go unspotted until they cause derailments.",
+      "targetCustomer": "Operations managers at US Class III short-line freight railroads.",
+      "whyNow": "Open-source vision models hit human-parity on rail defects in 2024 and the FRA tightened inspection rules.",
+      "pricingModel": "$2,500/month per yard + $0.05/mile inspected.",
+      "goToMarket": "Direct sales at the ASLRRA conference + insurance-broker channel.",
+      "competitors": ["Plasser", "Loram"],
+      "unfairAdvantage": "Founder spent 8 years at BNSF building the Class I version of this; signed pilot with two short-lines.",
+      "stage": "mvp"
+    },
+    "expectations": {
+      "verdictMustNotInclude": ["dead", "clone"],
+      "minSurviveReasons": 2
+    }
+  },
+  {
+    "id": "consumer-weak-distribution",
+    "category": "consumer_distribution",
+    "label": "Consumer with weak distribution",
+    "brief": {
+      "name": "MoodJar",
+      "oneLiner": "A daily mood-tracking journal for Gen-Z that uses AI to suggest matching playlists.",
+      "problem": "Gen-Z journals less than prior generations and reports more anxiety.",
+      "targetCustomer": "16-24 year olds in the US who already use TikTok and Spotify.",
+      "whyNow": "Mental-health awareness is high and Spotify's API is open.",
+      "pricingModel": "Free with $4.99/month premium.",
+      "goToMarket": "Hope it goes viral on TikTok.",
+      "competitors": ["Daylio", "Stoic", "Reflectly"],
+      "unfairAdvantage": "We deeply understand Gen-Z because we are Gen-Z.",
+      "stage": "idea"
+    },
+    "expectations": {
+      "killReasonsMustMatch": ["distribut|GTM|go-to-market|growth|virality|CAC|acquisition"],
+      "minKillReasons": 2
+    }
+  },
+  {
+    "id": "regulated-vertical",
+    "category": "regulated",
+    "label": "Regulated vertical (HIPAA / clinical)",
+    "brief": {
+      "name": "TheraNotes",
+      "oneLiner": "AI scribe that writes SOAP notes for solo licensed therapists during sessions.",
+      "problem": "Therapists spend 6-9 hours/week on notes after sessions; this is a leading driver of burnout.",
+      "targetCustomer": "Solo licensed therapists (LCSW, LMFT) in private practice.",
+      "whyNow": "Whisper-class transcription is now cheap; insurance audits are increasing.",
+      "pricingModel": "$79/therapist/month.",
+      "goToMarket": "Direct outbound on Psychology Today and Alma networks.",
+      "competitors": ["Upheal", "Mentalyc"],
+      "unfairAdvantage": "Co-founder is a practicing LCSW with 1,200-therapist email list.",
+      "stage": "revenue"
+    },
+    "expectations": {
+      "minAssumptionsCategory": ["technical", "competition"],
+      "killReasonsMustMatch": ["HIPAA|regulat|compliance|liabil|privacy|PHI"]
+    }
+  }
+]

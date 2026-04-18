@@ -1,0 +1,14 @@
+node_modules
+.next
+.env
+.env.*
+!.env.example
+.turbo
+coverage
+dist
+*.log
+
+evals/results/
+.vercel
+.DS_Store
+**/.DS_Store
