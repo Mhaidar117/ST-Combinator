@@ -21,14 +21,29 @@ import { incrementUsageAfterAnalysis } from "@/lib/usage/increment";
 
 const systemSkeptic = "You are a skeptical analyst. Output JSON only.";
 
-const synthesisSystemWithTools = `You are the synthesis lead of an adversarial investor committee. You receive a canonical brief, six committee critiques, contradictions, and assumptions. Your job is to produce one final structured report.
+function buildSynthesisSystemPrompt(runType: RunType): string {
+  const baseRoleAndTools = `You are the synthesis lead of an adversarial investor committee. You receive a canonical brief, six committee critiques, contradictions, and assumptions. Your job is to produce one final structured report.
 
-You have access to optional tools. Use them only when they would change your analysis:
-- lookup_competitors: when defensibility hinges on real-world competitor positioning
-- search_uploaded_docs: when a specific claim could be supported or refuted by the founder's own uploaded docs
-- get_prior_analyses: when this looks like a revision and you want to see whether prior weaknesses were addressed
+You have three tools available:
+- get_prior_analyses(): ALWAYS safe. Returns prior verdicts on this same startup, or an empty list. Useful framing for whether this is a first pass vs. iteration.
+- lookup_competitors(names): Looks up brief market context for SPECIFIC competitor company names listed in the brief. Skip if the brief lists no real competitors.
+- search_uploaded_docs(query): Semantic search over the founder's uploaded supporting docs. Returns { kind: "no_docs" } if nothing was uploaded — in that case, skip and proceed.
 
-Calling tools is optional. Most syntheses do not need any. When you have what you need, output JSON only matching the schema.`;
+Workflow:
+1. Decide which tools (if any) would sharpen your final report.
+2. Call them. Tools are cheap; prefer calling over guessing.
+3. Once you have what you need, output JSON ONLY matching the schema. No prose outside JSON. No markdown fences.`;
+
+  if (runType === "deep") {
+    return `${baseRoleAndTools}
+
+This is a DEEP STRESS TEST. You are EXPECTED to use tools. At minimum, call get_prior_analyses() at the start so you can frame this analysis in context. If the brief lists ≥1 specific competitor company name, also call lookup_competitors(). If the brief mentions uploaded materials or a specific testable claim, call search_uploaded_docs(). Skipping tools entirely on a deep run is a quality failure.`;
+  }
+
+  return `${baseRoleAndTools}
+
+This is an INVESTOR COMMITTEE run. Use tools whenever the brief gives you a hook — naming a real competitor, a testable claim, or being a follow-up to a prior analysis. A first call to get_prior_analyses() is almost always worth it.`;
+}
 
 const committeeListSchema = z.array(committeeOutputSchema);
 
@@ -192,7 +207,7 @@ export async function runAnalysisJob(analysisId: string): Promise<void> {
     });
 
     const { data: synthesis, toolCalls } = await completeJsonWithTools({
-      system: synthesisSystemWithTools,
+      system: buildSynthesisSystemPrompt(runType),
       user: synthesisPrompt,
       schema: finalAnalysisSchema,
       tools: SYNTHESIS_TOOLS,
@@ -200,6 +215,10 @@ export async function runAnalysisJob(analysisId: string): Promise<void> {
         startupId: startup.id as string,
         analysisId,
       },
+      // Deep mode: force at least one tool call on the first hop so the
+      // deliverable always shows agentic behavior. Committee mode lets the
+      // model decide.
+      initialToolChoice: runType === "deep" ? "required" : "auto",
       traceCtx: { analysisId, stage: "synthesis" },
     });
 

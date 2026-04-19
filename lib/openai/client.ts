@@ -98,6 +98,13 @@ export async function completeJsonWithTools<T>(opts: {
   model?: string;
   maxToolHops?: number;
   traceCtx?: TraceCtx;
+  /**
+   * Controls how the model is allowed to use tools on the FIRST hop:
+   * - "auto" (default): model may or may not call a tool.
+   * - "required": model MUST call at least one tool on hop 0.
+   * Subsequent hops always fall back to "auto" so the loop can terminate.
+   */
+  initialToolChoice?: "auto" | "required";
 }): Promise<{ data: T; toolCalls: ToolDispatchInfo[] }> {
   const openai = getOpenAI();
   const model = opts.model ?? DEFAULT_MODEL;
@@ -115,6 +122,8 @@ export async function completeJsonWithTools<T>(opts: {
     // On the last allowed iteration, force a final message so we never get
     // stuck looping on tool_calls.
     const forceFinal = hop === maxHops;
+    const toolChoice =
+      hop === 0 && opts.initialToolChoice === "required" ? "required" : "auto";
 
     const res = await withTrace(
       {
@@ -135,7 +144,7 @@ export async function completeJsonWithTools<T>(opts: {
           messages,
           temperature: 0.4,
           tools: forceFinal ? undefined : opts.tools,
-          tool_choice: forceFinal ? undefined : "auto",
+          tool_choice: forceFinal ? undefined : toolChoice,
           response_format: forceFinal ? { type: "json_object" } : undefined,
         }),
       (resp) => {
