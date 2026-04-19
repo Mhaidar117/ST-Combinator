@@ -19,9 +19,11 @@ export default function PricingPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <ul className="list-disc pl-5 space-y-1">
-              <li>3 quick roasts per month</li>
-              <li>No committee or deep stress test</li>
-              <li>No comparisons or uploads</li>
+              <li>20 quick roasts per month</li>
+              <li>20 committee runs per month</li>
+              <li>20 deep roasts per month</li>
+              <li>20 uploads per month</li>
+              <li>20 AI prompt exports per month</li>
             </ul>
             <Button asChild variant="outline" className="w-full">
               <Link href="/signup">Get started</Link>
@@ -35,9 +37,10 @@ export default function PricingPage() {
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <ul className="list-disc pl-5 space-y-1">
               <li>Unlimited quick roasts</li>
-              <li>20 committee or deep analyses per month</li>
+              <li>50 committee runs per month</li>
+              <li>50 deep roasts per month</li>
+              <li>50 AI prompt exports per month</li>
               <li>Report history, comparisons, uploads</li>
-              <li>PDF export placeholder in UI</li>
             </ul>
             <CheckoutButton />
           </CardContent>
