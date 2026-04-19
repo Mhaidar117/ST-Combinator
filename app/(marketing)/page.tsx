@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { VerdictTeaser } from "@/components/marketing/verdict-teaser";
 
 export default function LandingPage() {
   return (
@@ -65,19 +66,7 @@ export default function LandingPage() {
               <Link href="/demo">Open interactive demo</Link>
             </Button>
           </div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base text-muted-foreground">
-                Verdict preview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <p className="font-semibold text-destructive">Likely dead</p>
-              <p className="text-muted-foreground">
-                Distribution fantasy meets SMB claims with enterprise GTM.
-              </p>
-            </CardContent>
-          </Card>
+          <VerdictTeaser />
         </div>
       </section>
 
