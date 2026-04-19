@@ -12,6 +12,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useState } from "react";
+import { buildCodingAgentPrompt } from "@/lib/prompts/codingAgent";
 
 type SectionMap = Record<string, unknown>;
 
@@ -36,8 +37,11 @@ export function AnalysisReport(props: {
     investor_attractiveness: number;
   } | null;
   sections: SectionMap;
+  inputSnapshot?: Record<string, unknown>;
 }) {
   const [shareMsg, setShareMsg] = useState<string | null>(null);
+  const [aiPrompt, setAiPrompt] = useState<string | null>(null);
+  const [aiPromptCopied, setAiPromptCopied] = useState(false);
 
   async function share() {
     setShareMsg(null);
@@ -53,6 +57,38 @@ export function AnalysisReport(props: {
     }
     await navigator.clipboard.writeText(j.shareUrl);
     setShareMsg("Link copied to clipboard.");
+  }
+
+  async function exportAiPrompt() {
+    const snap = (props.inputSnapshot ?? {}) as Record<string, unknown>;
+    const prompt = buildCodingAgentPrompt({
+      startup: {
+        name: snap.name as string | undefined,
+        one_liner: snap.one_liner as string | undefined,
+        problem: snap.problem as string | undefined,
+        target_customer: snap.target_customer as string | undefined,
+        why_now: snap.why_now as string | undefined,
+        pricing_model: snap.pricing_model as string | undefined,
+        go_to_market: snap.go_to_market as string | undefined,
+        competitors: snap.competitors as string[] | undefined,
+        unfair_advantage: snap.unfair_advantage as string | undefined,
+        stage: snap.stage as string | undefined,
+        constraints: snap.constraints as string | undefined,
+      },
+      verdict: props.verdict,
+      summary: props.summary,
+      killReasons: kill,
+      surviveReasons: survive,
+    });
+    setAiPrompt(prompt);
+    setAiPromptCopied(false);
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setAiPromptCopied(true);
+    } catch {
+      // clipboard may be unavailable (insecure context) — user can still copy
+      // from the textarea below.
+    }
   }
 
   const kill = props.sections.kill_reasons as string[] | undefined;
@@ -133,10 +169,72 @@ export function AnalysisReport(props: {
         <Button type="button" variant="outline" size="sm" disabled title="PDF export coming soon">
           Export PDF
         </Button>
+        <Button
+          type="button"
+          size="sm"
+          onClick={exportAiPrompt}
+          className="bg-emerald-700 text-white hover:bg-emerald-800 focus-visible:ring-emerald-700"
+          title="Generate an MVP-build prompt you can paste into Cursor, Claude Code, or v0"
+        >
+          Export AI Prompt
+        </Button>
         {shareMsg && (
           <span className="text-xs text-muted-foreground self-center">{shareMsg}</span>
         )}
       </div>
+
+      {aiPrompt && (
+        <Card className="border-emerald-700/40 bg-emerald-700/5">
+          <CardHeader className="flex flex-row items-center justify-between gap-2">
+            <CardTitle className="text-base">Coding-agent MVP prompt</CardTitle>
+            <div className="flex items-center gap-2">
+              {aiPromptCopied && (
+                <span className="text-xs text-emerald-700">
+                  Copied to clipboard
+                </span>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(aiPrompt);
+                    setAiPromptCopied(true);
+                  } catch {
+                    // ignore
+                  }
+                }}
+              >
+                Copy
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setAiPrompt(null);
+                  setAiPromptCopied(false);
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground mb-2">
+              Paste this into a fresh Cursor / Claude Code / v0 session to
+              scaffold an MVP grounded in this analysis.
+            </p>
+            <textarea
+              readOnly
+              value={aiPrompt}
+              onClick={(e) => e.currentTarget.select()}
+              className="w-full h-64 resize-y rounded-md border border-border/40 bg-background p-3 font-mono text-xs leading-relaxed"
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-primary/30 bg-primary/5">
         <CardHeader className="flex flex-row items-center justify-between gap-2">

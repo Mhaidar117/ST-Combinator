@@ -88,6 +88,9 @@ export default async function AnalysisPage({
         status={analysis.status}
         scores={scores}
         sections={sections}
+        inputSnapshot={
+          (analysis.input_snapshot ?? {}) as Record<string, unknown>
+        }
       />
     </div>
   );
