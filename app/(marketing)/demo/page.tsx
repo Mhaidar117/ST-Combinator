@@ -212,7 +212,7 @@ export default function DemoPage() {
       <div className="grid gap-3 sm:grid-cols-2">
         {QUOTES.map((q, i) => (
           <Card key={i} className="bg-muted/30">
-            <CardContent className="py-4 text-sm italic">"{q}"</CardContent>
+            <CardContent className="py-4 text-sm italic">&ldquo;{q}&rdquo;</CardContent>
           </Card>
         ))}
       </div>
@@ -311,7 +311,7 @@ export default function DemoPage() {
                   {m.score} / 10
                 </Badge>
               </div>
-              <p className="italic text-muted-foreground">"{m.punchyLine}"</p>
+              <p className="italic text-muted-foreground">&ldquo;{m.punchyLine}&rdquo;</p>
               <div>
                 <p className="text-xs font-medium text-emerald-500">Strongest angle</p>
                 <p className="text-xs text-muted-foreground">{m.strongest}</p>

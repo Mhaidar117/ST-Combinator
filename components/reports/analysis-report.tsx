@@ -200,7 +200,7 @@ export function AnalysisReport(props: {
         <div className="grid gap-3 sm:grid-cols-2">
           {quotes.slice(0, 4).map((q, i) => (
             <Card key={i} className="bg-muted/30">
-              <CardContent className="py-4 text-sm italic">"{q}"</CardContent>
+              <CardContent className="py-4 text-sm italic">&ldquo;{q}&rdquo;</CardContent>
             </Card>
           ))}
         </div>
@@ -329,7 +329,7 @@ export function AnalysisReport(props: {
                   </Badge>
                 </div>
                 {m.punchyLine && (
-                  <p className="italic text-muted-foreground">"{m.punchyLine}"</p>
+                  <p className="italic text-muted-foreground">&ldquo;{m.punchyLine}&rdquo;</p>
                 )}
                 <div>
                   <p className="text-xs font-medium text-emerald-500">
