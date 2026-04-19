@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/accordion";
 import { useState } from "react";
 import { buildCodingAgentPrompt } from "@/lib/prompts/codingAgent";
+import { OfficeHoursDrawer } from "@/components/reports/office-hours-drawer";
 
 type SectionMap = Record<string, unknown>;
 
@@ -42,6 +43,7 @@ export function AnalysisReport(props: {
   const [shareMsg, setShareMsg] = useState<string | null>(null);
   const [aiPrompt, setAiPrompt] = useState<string | null>(null);
   const [aiPromptCopied, setAiPromptCopied] = useState(false);
+  const [officeHoursRole, setOfficeHoursRole] = useState<string | null>(null);
 
   async function share() {
     setShareMsg(null);
@@ -451,6 +453,15 @@ export function AnalysisReport(props: {
                     {m.biggestConcern}
                   </p>
                 </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-full text-xs"
+                  onClick={() => setOfficeHoursRole(m.agent)}
+                >
+                  Push back
+                </Button>
               </div>
             ))}
           </CardContent>
@@ -477,6 +488,17 @@ export function AnalysisReport(props: {
             on a new analysis to see role-by-role critiques.
           </CardContent>
         </Card>
+      )}
+
+      {officeHoursRole && (
+        <OfficeHoursDrawer
+          analysisId={props.analysisId}
+          role={officeHoursRole}
+          open={!!officeHoursRole}
+          onOpenChange={(open) => {
+            if (!open) setOfficeHoursRole(null);
+          }}
+        />
       )}
     </div>
   );

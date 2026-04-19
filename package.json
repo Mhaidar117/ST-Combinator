@@ -13,7 +13,8 @@
     "db:seed": "npx tsx scripts/seed.ts",
     "evals": "tsx evals/run.ts",
     "smoke": "tsx scripts/smoke.ts",
-    "demo": "tsx scripts/demo-agentic.ts"
+    "demo": "tsx scripts/demo-agentic.ts",
+    "smoke:office-hours": "tsx scripts/smoke-office-hours.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.2",
