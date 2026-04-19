@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -9,6 +10,8 @@ import type { PlanTier } from "@/types/analysis";
 import { captureServerEvent } from "@/lib/analytics/server";
 import { ANALYTICS } from "@/lib/analytics/events";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const bodySchema = z.object({
@@ -104,22 +107,32 @@ export async function POST(req: Request) {
     runType,
   });
 
-  // Fire-and-forget: kick off the pipeline without blocking the HTTP
+  // Fire-and-forget: kick off the pipeline WITHOUT blocking the HTTP
   // response so the client can render a live progress UI by polling
-  // /api/analyses/[id]/status. Errors are written to analyses.status =
-  // "failed" inside markAnalysisFailed, so the client can detect them.
-  void runAnalysisJob(analysis.id)
-    .then(() =>
-      captureServerEvent(ANALYTICS.analysis_completed, {
-        analysisId: analysis.id,
-      }),
-    )
-    .catch((e) =>
-      captureServerEvent(ANALYTICS.analysis_failed, {
-        analysisId: analysis.id,
-        message: e instanceof Error ? e.message : String(e),
-      }),
-    );
+  // /api/analyses/[id]/status.
+  //
+  // CRITICAL: on Vercel, serverless functions are killed the moment they
+  // return a response. `waitUntil` tells the runtime to keep the function
+  // alive until this promise settles (up to maxDuration), which is the only
+  // way to do background work in serverless. Locally `waitUntil` is a no-op
+  // and the Node process keeps running anyway.
+  //
+  // Errors are written to analyses.status = "failed" inside
+  // markAnalysisFailed, so the polling client can detect them.
+  waitUntil(
+    runAnalysisJob(analysis.id)
+      .then(() =>
+        captureServerEvent(ANALYTICS.analysis_completed, {
+          analysisId: analysis.id,
+        }),
+      )
+      .catch((e) =>
+        captureServerEvent(ANALYTICS.analysis_failed, {
+          analysisId: analysis.id,
+          message: e instanceof Error ? e.message : String(e),
+        }),
+      ),
+  );
 
   return NextResponse.json({ analysisId: analysis.id, status: "queued" });
 }
