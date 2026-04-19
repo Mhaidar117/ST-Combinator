@@ -11,126 +11,142 @@ import {
 } from "@/components/ui/accordion";
 
 const SCORES = [
-  { label: "Problem severity", value: 6 },
-  { label: "Customer clarity", value: 4 },
-  { label: "Market timing", value: 5 },
-  { label: "Distribution plausibility", value: 3 },
-  { label: "Monetization strength", value: 5 },
-  { label: "Defensibility", value: 3 },
-  { label: "Founder–market fit", value: 7 },
-  { label: "Speed to MVP", value: 6 },
-  { label: "Retention potential", value: 4 },
-  { label: "Investor attractiveness", value: 4 },
+  { label: "Problem severity", value: 8 },
+  { label: "Customer clarity", value: 9 },
+  { label: "Market timing", value: 7 },
+  { label: "Distribution plausibility", value: 6 },
+  { label: "Monetization strength", value: 8 },
+  { label: "Defensibility", value: 6 },
+  { label: "Founder–market fit", value: 9 },
+  { label: "Speed to MVP", value: 8 },
+  { label: "Retention potential", value: 7 },
+  { label: "Investor attractiveness", value: 7 },
 ] as const;
 
 const COMMITTEE = [
   {
     agent: "vc_partner",
-    score: 4,
-    punchyLine: "Wedge is real but moat is positioning, not product.",
-    strongest: "Founder has unfair access in one vertical; can land 3-5 logos quickly.",
-    concern: "TAM math relies on category expansion that competitors will own first.",
+    score: 7,
+    punchyLine: "Vertical wedge with a credible founder is exactly the shape I want.",
+    strongest:
+      "Founder is a former roofing operator with 11 years in the trade. That opens doors no salesperson can.",
+    concern:
+      "Vertical SaaS is great until you cap at $10M ARR. Path to $100M needs a second product.",
   },
   {
     agent: "customer_skeptic",
-    score: 3,
-    punchyLine: "I cannot tell which user this is for.",
-    strongest: "Pain is acute when it shows up.",
-    concern: "ICP says SMB ops lead; GTM says enterprise outbound. Pick one.",
+    score: 8,
+    punchyLine: "I'd buy this if I were a roofing GC tomorrow.",
+    strongest:
+      "Photo-to-quote in 60 seconds is a 10x time saver. Existing pilot already has paying customers.",
+    concern:
+      "15-minute per-project onboarding still feels long. Half your churn will live there.",
   },
   {
     agent: "growth_lead",
-    score: 3,
-    punchyLine: "CAC story is hand-wavy; payback assumes 95% retention.",
-    strongest: "Founder-led sales can clear first 10 customers.",
-    concern: "No repeatable channel beyond cold outbound. Will cap at $1M ARR.",
+    score: 6,
+    punchyLine: "PLG won't work here, but outbound + associations is tractable.",
+    strongest:
+      "Roofing associations are tight-knit and have member discount programs that scale acquisition.",
+    concern:
+      "Outbound CAC could swing 3x if association partnerships don't materialize. Run that test first.",
   },
   {
     agent: "product_strategist",
-    score: 5,
-    punchyLine: "Workflow wedge is sharp; surface is too broad.",
-    strongest: "If they ship the import-then-enrich loop, sticky in week one.",
-    concern: "Roadmap leaks into 4 adjacent products; team will fragment.",
+    score: 8,
+    punchyLine: "Photo-to-quote is the wedge. Don't fragment it.",
+    strongest:
+      "The import → enrich → quote loop is sticky from day one. Hard to copy without trade context.",
+    concern:
+      "Roadmap mentions 'every commercial trade.' Stay in roofing until 100 paying GCs.",
   },
   {
     agent: "technical_reviewer",
-    score: 6,
-    punchyLine: "Buildable in 8 weeks by 2 engineers; nothing exotic.",
-    strongest: "No model training risk — purely orchestration over commodity APIs.",
-    concern: "Vendor lock-in to one LLM provider; pricing-margin sensitivity.",
+    score: 7,
+    punchyLine: "OCR + LLM orchestration over commodity APIs. Build risk is low.",
+    strongest:
+      "No model training risk. Two engineers can ship the v1 in 6 weeks.",
+    concern:
+      "Margin sensitivity to OpenAI pricing — at scale, fine-tuned smaller models become a moat.",
   },
   {
     agent: "competitor_analyst",
-    score: 3,
-    punchyLine: "Two YC W25 cos have 6-month head starts on the same ICP.",
-    strongest: "Incumbents (Salesforce, Hubspot) will not move down-market here.",
-    concern: "Direct competitors are already shipping. Differentiation is unclear.",
+    score: 6,
+    punchyLine: "Incumbents won't move down-market here. JobNimbus is the only real threat.",
+    strongest:
+      "ServiceTitan is enterprise; Procore is GC-side. Both ignore the $2-10M commercial roofing GC.",
+    concern:
+      "JobNimbus is horizontal but could ship a roofing module within 12 months.",
   },
 ] as const;
 
 const CONTRADICTIONS = [
   {
-    title: "ICP says SMB; GTM says enterprise outbound",
-    severity: "high",
+    title: "Pricing tier collides with the time-savings narrative",
+    severity: "medium",
     explanation:
-      "The brief lists 'SMB operators (5-50 ppl)' as the customer but the GTM plan is 'outbound to VPs at $50M+ ARR companies'. These two motions need different products and different teams.",
+      "Pricing is $399/mo flat across all GC sizes. But the time-savings narrative scales with project volume — a $5M GC saves 10x more than a $500k GC and should pay accordingly.",
     fixes: [
-      "If SMB: switch GTM to PLG + community. Drop outbound spend.",
-      "If enterprise: rewrite the ICP, the pricing, and the onboarding.",
+      "Add a per-quote-generated metered tier on top of the $399 base.",
+      "Offer a $999/mo plan for GCs doing >40 quotes/mo with included credits.",
     ],
   },
   {
-    title: "Pricing model conflicts with retention claim",
-    severity: "medium",
+    title: "Outbound headcount plan understates ramp time",
+    severity: "low",
     explanation:
-      "Pricing is one-time perpetual but the retention narrative depends on weekly habit formation. One-time buyers do not generate weekly active usage signals to optimize against.",
+      "GTM plan assumes 1 BDR ramps to 20 booked meetings/mo in month 2. Realistic ramp in vertical SaaS is 4-5 months even for an experienced rep, especially in a relationship-driven trade.",
     fixes: [
-      "Move to seat-based subscription if weekly active usage is the success metric.",
+      "Hire a former roofing-industry sales rep, not a generalist BDR.",
+      "Plan for 5-month ramp in the cash model; raise accordingly.",
     ],
   },
 ];
 
 const ASSUMPTIONS = [
   {
-    assumption: "Older Excel users will adopt AI-native workflows within 90 days.",
+    assumption:
+      "Roofing GCs will adopt a quoting tool that requires 15-min onboarding per project.",
     category: "customer",
-    fragility: 8,
-    confidence: 4,
-    test: "5 user interviews this week with target persona; ship a clickable Figma; measure stated intent.",
+    fragility: 5,
+    confidence: 7,
+    test: "Run 5 onboarding sessions with existing pilots; measure to-completion rate. Below 80% means the loop needs work.",
   },
   {
-    assumption: "Personalized service is a durable differentiator vs. self-serve incumbents.",
-    category: "competition",
-    fragility: 7,
-    confidence: 5,
-    test: "Cold-email 50 prospects with two variants (high-touch vs. self-serve trial); measure reply rate.",
-  },
-  {
-    assumption: "Cold outbound CAC will stay below $1,200 at the target ICP.",
+    assumption:
+      "Association partnerships will yield 2x the lead flow of cold outbound.",
     category: "distribution",
     fragility: 6,
     confidence: 5,
-    test: "Run a 200-prospect outbound sprint; measure booked-meeting rate. Below 3% kills the channel.",
+    test: "Pitch 3 regional roofing associations on a member-discount program; measure intro rate and conversion.",
+  },
+  {
+    assumption:
+      "$399/mo will retain >90% MoM after the 60-day promo expires.",
+    category: "monetization",
+    fragility: 4,
+    confidence: 7,
+    test: "Cohort the existing 8 paying pilots; measure retention through promo-end on Aug 1.",
   },
 ];
 
 const EXPERIMENTS = [
-  "5 customer-discovery calls with the exact ICP this week.",
-  "Ship a 1-page landing + waitlist; measure conversion against $5/click cold traffic.",
-  "Build a 2-week clickable prototype; charge $200 deposits to validate willingness-to-pay.",
-  "A/B two pricing pages: $49/mo seat vs. $1,500 one-time; measure interest, not revenue.",
+  "Sign 10 paid pilots at $99/mo for 60 days to compress the sales cycle and prove the retention curve.",
+  "Pitch 3 regional roofing associations on a member-discount program; track intro → demo → close rate.",
+  "Ship the 'photo-to-quote in 60 seconds' demo loop publicly; gate access to leave a real email.",
+  "Run one upmarket pilot with a $5M+ GC to test whether the price ceiling moves above $999/mo.",
 ];
 
 const REPOSITIONING = [
-  "Reposition as a vertical-specific tool for one named industry (e.g., commercial roofing ops) rather than horizontal AI for older Excel users.",
-  "Rebrand from 'AI for Excel users' to 'Quote-to-cash for solo trades' — same engine, sharper wedge.",
+  "Stay vertical: name the wedge 'Quote-to-Cash for Commercial Roofing' explicitly. Don't dilute to 'all trades' until 100 paying GCs.",
+  "Add per-quote metered pricing on top of the flat $399 base so the price scales with the value the GC actually receives.",
 ];
 
 const QUOTES = [
-  "Wedge is real but moat is positioning, not product.",
-  "I cannot tell which user this is for.",
-  "Buildable in 8 weeks by 2 engineers — but two W25 cos already shipped it.",
-  "Pick SMB or pick enterprise. You cannot do both with this team.",
+  "Vertical wedge with a credible founder is exactly the shape I want.",
+  "I'd buy this if I were a roofing GC tomorrow.",
+  "Photo-to-quote is the wedge. Don't fragment into 'AI for trades'.",
+  "Distribution is the only real risk — and it's a 30-day test.",
 ];
 
 export default function DemoPage() {
@@ -149,27 +165,28 @@ export default function DemoPage() {
         </Button>
       </div>
 
-      <Card className="border-destructive/30 bg-destructive/5">
+      <Card className="border-emerald-500/30 bg-emerald-500/5">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Verdict</CardTitle>
-          <Badge variant="destructive">Weak wedge</Badge>
+          <Badge variant="success">Promising</Badge>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p className="text-base">
-            Distribution assumptions collapse under modest CAC stress. Moat
-            narrative is mostly positioning. The team can ship something real
-            in 8 weeks, but two YC W25 companies are already shipping the same
-            ICP wedge.
+            Sharp ICP, credible founder, and a wedge that incumbents will not
+            touch. The photo-to-quote loop is a 10x time saver with paying
+            pilots already on the books. Distribution is the only real risk,
+            and it&rsquo;s a testable 30-day question — pitch the roofing
+            associations before you scale outbound.
           </p>
           <p className="text-xs text-muted-foreground">
-            Confidence: 0.62 · Run type: investor committee · Tone: direct
+            Confidence: 0.78 · Run type: investor committee · Tone: direct
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Scorecard — overall 4.2</CardTitle>
+          <CardTitle className="text-lg">Scorecard — overall 7.5</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {SCORES.map((s) => (
@@ -187,24 +204,28 @@ export default function DemoPage() {
       <div className="grid md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base text-destructive">Why this dies</CardTitle>
+            <CardTitle className="text-base text-emerald-500">
+              Why this works
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>• Paid acquisition story is hand-wavy — no proven channel.</p>
-            <p>• ICP says SMB; GTM says enterprise outbound.</p>
-            <p>• Two direct competitors already shipping in this ICP.</p>
-            <p>• Defensibility ranks 3/10 — moat is positioning, not product.</p>
+            <p>• Founder is a former roofing operator — 11 years in the trade.</p>
+            <p>• ICP is sharp, painful, underserved, and has real budget.</p>
+            <p>• Price tested at $399/mo with 8 paying pilots already on the books.</p>
+            <p>• Founder-market fit ranks 9/10 — credibility opens doors no rep can.</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base text-emerald-500">Why it might live</CardTitle>
+            <CardTitle className="text-base text-destructive">
+              Why it might still die
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>• Founder has unfair distribution access in one niche vertical.</p>
-            <p>• Problem is acute and frequent for the narrow workflow targeted.</p>
-            <p>• Build is 8 weeks with 2 engineers — fast time-to-feedback.</p>
-            <p>• Founder-market fit ranks 7/10 — credible operator.</p>
+            <p>• Outbound CAC could exceed $1,500 if association partnerships don&rsquo;t land.</p>
+            <p>• JobNimbus could ship a competitive roofing module within 12 months.</p>
+            <p>• Roofing season cyclicality could create cash-flow gaps in Q4-Q1.</p>
+            <p>• Founder-led sales doesn&rsquo;t scale beyond ~50 logos without a hire.</p>
           </CardContent>
         </Card>
       </div>
@@ -284,7 +305,7 @@ export default function DemoPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Repositioning options</CardTitle>
+          <CardTitle className="text-lg">Sharpening moves</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
           {REPOSITIONING.map((r) => (
