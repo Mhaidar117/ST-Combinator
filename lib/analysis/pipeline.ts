@@ -40,9 +40,12 @@ Workflow:
 This is a DEEP STRESS TEST. You are EXPECTED to use tools. At minimum, call get_prior_analyses() at the start so you can frame this analysis in context. If the brief lists ≥1 specific competitor company name, also call lookup_competitors(). If the brief mentions uploaded materials or a specific testable claim, call search_uploaded_docs(). Skipping tools entirely on a deep run is a quality failure.`;
   }
 
+  // Investor committee runs are also expected to use at least one tool. The
+  // safe baseline is get_prior_analyses() — it always succeeds and grounds
+  // the synthesis in whether this is a first pass or an iteration.
   return `${baseRoleAndTools}
 
-This is an INVESTOR COMMITTEE run. Use tools whenever the brief gives you a hook — naming a real competitor, a testable claim, or being a follow-up to a prior analysis. A first call to get_prior_analyses() is almost always worth it.`;
+This is an INVESTOR COMMITTEE run. You are EXPECTED to use tools. At minimum, call get_prior_analyses() at the start. If the brief lists ≥1 specific competitor company name, also call lookup_competitors(). If the founder uploaded supporting docs, call search_uploaded_docs() to ground a specific claim. Skipping tools entirely is a quality failure.`;
 }
 
 const committeeListSchema = z.array(committeeOutputSchema);
@@ -215,10 +218,10 @@ export async function runAnalysisJob(analysisId: string): Promise<void> {
         startupId: startup.id as string,
         analysisId,
       },
-      // Deep mode: force at least one tool call on the first hop so the
-      // deliverable always shows agentic behavior. Committee mode lets the
-      // model decide.
-      initialToolChoice: runType === "deep" ? "required" : "auto",
+      // Both committee and deep runs force at least one tool call on the
+      // first hop so the deliverable always shows agentic behavior. Only
+      // quick_roast (which doesn't even reach this code path) is exempt.
+      initialToolChoice: "required",
       traceCtx: { analysisId, stage: "synthesis" },
     });
 
