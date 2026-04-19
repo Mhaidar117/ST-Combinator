@@ -4,10 +4,9 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: "4mb",
     },
-    // pdf-parse ships sample data + dynamic require()s that webpack can't
-    // bundle cleanly. Treat it as an external server-only package so Node
-    // requires it at runtime from node_modules.
-    serverComponentsExternalPackages: ["pdf-parse"],
+    // unpdf bundles its own pdfjs worker; let Node require it directly so
+    // webpack doesn't try to inline the worker bundle.
+    serverComponentsExternalPackages: ["unpdf"],
   },
 };
 
