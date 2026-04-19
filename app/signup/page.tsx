@@ -88,6 +88,11 @@ export default function SignupPage() {
                 Sign in
               </Link>
             </p>
+            <p className="text-sm text-muted-foreground text-center">
+              <Link href="/" className="hover:text-foreground underline-offset-4 hover:underline">
+                ← Back to home
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>
