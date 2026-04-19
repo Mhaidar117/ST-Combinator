@@ -50,3 +50,73 @@
     @apply bg-background text-foreground antialiased;
   }
 }
+
+/*
+ * Print stylesheet — used when the user clicks "Export PDF" on the analysis
+ * page (which calls window.print()). The user picks "Save as PDF" in the
+ * native print dialog. We:
+ *   1. Hide app chrome (header, action toolbar, "View trace" link, etc.)
+ *   2. Force a light, ink-friendly palette so dark backgrounds don't burn
+ *      through pages and waste toner.
+ *   3. Expand to full width and remove rounded card decorations that don't
+ *      reproduce well on paper.
+ */
+@media print {
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Override the design tokens for print so cards / muted text / borders
+     render in a print-safe palette without changing the live site. */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 5%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 5%;
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 30%;
+    --border: 0 0% 80%;
+    --primary: 0 0% 10%;
+    --primary-foreground: 0 0% 100%;
+  }
+
+  /* Remove decorative chrome that wastes ink. */
+  .border,
+  [class*="border-"] {
+    border-color: hsl(0 0% 85%) !important;
+  }
+
+  .shadow,
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg {
+    box-shadow: none !important;
+  }
+
+  /* Make the report span the page rather than being constrained to the
+     6xl container. */
+  .max-w-6xl {
+    max-width: 100% !important;
+  }
+
+  /* Avoid awkward page breaks inside cards / report sections. */
+  .card,
+  [class*="Card"],
+  section,
+  article {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  @page {
+    margin: 0.6in 0.5in;
+    size: letter;
+  }
+}

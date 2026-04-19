@@ -156,7 +156,7 @@ export function AnalysisReport(props: {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 no-print">
         <Button asChild variant="outline" size="sm">
           <Link href={`/startups/${props.startupId}/analyze`}>Rerun</Link>
         </Button>
@@ -166,7 +166,13 @@ export function AnalysisReport(props: {
         <Button type="button" variant="secondary" size="sm" onClick={share}>
           Share link
         </Button>
-        <Button type="button" variant="outline" size="sm" disabled title="PDF export coming soon">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => window.print()}
+          title="Open the print dialog — choose 'Save as PDF' to export"
+        >
           Export PDF
         </Button>
         <Button

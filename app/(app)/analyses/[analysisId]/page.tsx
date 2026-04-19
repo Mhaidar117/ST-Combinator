@@ -74,7 +74,7 @@ export default async function AnalysisPage({
         </div>
         <Link
           href={`/analyses/${analysis.id}/traces`}
-          className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+          className="text-xs text-muted-foreground underline-offset-4 hover:underline no-print"
         >
           View trace →
         </Link>
