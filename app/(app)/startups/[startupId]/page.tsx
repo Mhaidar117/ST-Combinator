@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UploadForm } from "@/components/startup/upload-form";
+import { AnalysisRow } from "@/components/analysis/analysis-row";
 
 export default async function StartupDetailPage({
   params,
@@ -25,12 +26,6 @@ export default async function StartupDetailPage({
 
   if (error || !startup) notFound();
 
-  const { data: profile } = await supabase
-    .from("users_profile")
-    .select("plan_tier")
-    .eq("id", user!.id)
-    .single();
-
   const { data: analyses } = await supabase
     .from("analyses")
     .select("id, run_type, status, verdict, created_at")
@@ -41,8 +36,6 @@ export default async function StartupDetailPage({
     .from("startup_uploads")
     .select("id, original_filename, created_at")
     .eq("startup_id", startup.id);
-
-  const isPro = profile?.plan_tier === "pro";
 
   return (
     <div className="space-y-8">
@@ -89,12 +82,7 @@ export default async function StartupDetailPage({
             <CardTitle className="text-lg">Uploads</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {!isPro && (
-              <p className="text-sm text-muted-foreground">
-                Pro unlocks PDF / text uploads tied to this startup.
-              </p>
-            )}
-            {isPro && <UploadForm startupId={startup.id} />}
+            <UploadForm startupId={startup.id} />
             <ul className="text-sm text-muted-foreground space-y-1">
               {(uploads ?? []).map((u) => (
                 <li key={u.id}>{u.original_filename}</li>
@@ -116,20 +104,13 @@ export default async function StartupDetailPage({
             <p className="text-sm text-muted-foreground">No analyses yet.</p>
           )}
           {(analyses ?? []).map((a) => (
-            <div
+            <AnalysisRow
               key={a.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/40 px-3 py-2 text-sm"
-            >
-              <div>
-                {a.run_type} · <Badge variant="outline">{a.status}</Badge>
-                {a.verdict && (
-                  <span className="text-muted-foreground"> — {a.verdict}</span>
-                )}
-              </div>
-              <Button asChild size="sm" variant="ghost">
-                <Link href={`/analyses/${a.id}`}>Open</Link>
-              </Button>
-            </div>
+              id={a.id}
+              runType={a.run_type}
+              status={a.status}
+              verdict={a.verdict}
+            />
           ))}
         </CardContent>
       </Card>

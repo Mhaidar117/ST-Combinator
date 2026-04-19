@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AnalysisRow } from "@/components/analysis/analysis-row";
 
 export default async function DashboardPage() {
   const supabase = await createSupabaseServerClient();
@@ -81,23 +82,14 @@ export default async function DashboardPage() {
             <p className="text-sm text-muted-foreground">No analyses yet.</p>
           )}
           {(analyses ?? []).map((a) => (
-            <div
+            <AnalysisRow
               key={a.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/40 px-3 py-2 text-sm"
-            >
-              <div>
-                <span className="text-muted-foreground">
-                  {startupNames.get(a.startup_id) ?? "Startup"}
-                </span>
-                {" · "}
-                <span>{a.run_type}</span>
-                {" · "}
-                <Badge variant="outline">{a.status}</Badge>
-              </div>
-              <Button asChild size="sm" variant="ghost">
-                <Link href={`/analyses/${a.id}`}>Open</Link>
-              </Button>
-            </div>
+              id={a.id}
+              contextLabel={startupNames.get(a.startup_id) ?? "Startup"}
+              runType={a.run_type}
+              status={a.status}
+              verdict={a.verdict}
+            />
           ))}
         </CardContent>
       </Card>
