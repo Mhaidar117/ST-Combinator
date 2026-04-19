@@ -24,9 +24,15 @@ multi-agent LLM critique and returns a structured report containing:
   product strategist, technical reviewer, competitor analyst).
 
 **User**: Solo founders, hackathon teams, and small early-stage startups
-who want fast, structured pre-commit feedback. Operates as a SaaS with a
-free tier (3 quick-roasts/month) and a Pro tier ($X/month) for committee
-runs and document uploads.
+who want fast, structured pre-commit feedback. The product is built as a
+SaaS with Stripe billing wired through. During the deliverable evaluation
+window the plan-tier gate is intentionally relaxed (every signed-in user
+gets 20 monthly credits and full access to committee runs, deep runs,
+uploads, and compare) via a single `FEATURES_UNLOCKED_FOR_FREE_USERS`
+flag in `lib/usage/limits.ts`; flipping the flag back to `false` and
+reverting `supabase/migrations/20260419000000_default_credits_to_20.sql`
+re-enables the original free / Pro split without touching the Stripe
+webhook code path.
 
 ## b. System Design
 
@@ -75,20 +81,23 @@ flowchart TD
 
 ### Main components
 
-| Layer       | Files / location                                                 |
-| ----------- | ---------------------------------------------------------------- |
-| Form UI     | `app/(app)/startups/new`, `app/(app)/startups/[id]/analyze`      |
-| Report UI   | `app/(app)/analyses/[id]`, `components/reports/analysis-report`  |
-| API         | `app/api/analyze`, `/api/uploads`, `/api/share`, `/api/metrics`, `/api/debug/traces/[id]` |
-| Pipeline    | `lib/analysis/pipeline.ts`                                       |
-| LLM client  | `lib/openai/client.ts` (`completeJson`, `completeJsonWithTools`) |
-| Tools       | `lib/openai/tools.ts` (3 synthesis tools + dispatcher)           |
-| Embeddings  | `lib/embeddings/writer.ts`, `app/api/uploads/route.ts`           |
-| Persistence | `lib/analysis/persist.ts`, `supabase/migrations/*`               |
-| Trace       | `lib/observability/trace.ts`, `analysis_traces` table            |
-| Metrics     | `lib/metrics/compute.ts`, `app/api/metrics`, `app/(app)/admin/metrics` |
-| Eval        | `evals/run.ts`, `evals/score.ts`, `evals/scenarios.json`         |
-| Smoke       | `scripts/smoke.ts`                                               |
+| Layer            | Files / location                                                                                              |
+| ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| Form UI          | `app/(app)/startups/new`, `app/(app)/startups/[id]/analyze`, `components/startups/run-analysis-client.tsx` (live progress polling) |
+| PDF auto-fill    | `app/api/startups/parse/route.ts` + `lib/uploads/extract.ts` — drop a PDF on **New Startup**, server extracts text with `unpdf`, LLM returns structured field suggestions |
+| Report UI        | `app/(app)/analyses/[id]`, `components/reports/analysis-report.tsx` (Export PDF via `window.print()` + print stylesheet, Export AI Prompt, share-link copy) |
+| Coding-agent prompt | `lib/prompts/codingAgent.ts` — `buildCodingAgentPrompt()` produces an MVP-scoped prompt from the report's verdict + brief snapshot |
+| API              | `app/api/analyze`, `/api/analyses/[id]` (DELETE w/ RLS-scoped ownership), `/api/uploads`, `/api/share`, `/api/metrics`, `/api/debug/traces/[id]` |
+| Pipeline         | `lib/analysis/pipeline.ts` (background-executed via `waitUntil` so Vercel keeps the function alive)            |
+| LLM client       | `lib/openai/client.ts` (`completeJson`, `completeJsonWithTools` with optional `initialToolChoice: "required"`) |
+| Tools            | `lib/openai/tools.ts` (3 synthesis tools + dispatcher)                                                         |
+| Embeddings       | `lib/embeddings/writer.ts`, `app/api/uploads/route.ts`                                                         |
+| Persistence      | `lib/analysis/persist.ts`, `supabase/migrations/*` (cascade delete of traces / scores / sections via FK)       |
+| Plan-gate        | `lib/usage/limits.ts`, `lib/usage/increment.ts` (Stripe wiring intact behind `FEATURES_UNLOCKED_FOR_FREE_USERS`) |
+| Trace            | `lib/observability/trace.ts`, `analysis_traces` table                                                          |
+| Metrics          | `lib/metrics/compute.ts`, `app/api/metrics`, `app/(app)/admin/metrics`                                          |
+| Eval             | `evals/run.ts`, `evals/score.ts`, `evals/scenarios.json`                                                       |
+| Smoke + demo     | `scripts/smoke.ts`, `scripts/demo-agentic.ts` (`npm run demo`)                                                 |
 
 ## c. Why the System is Agentic
 
@@ -96,41 +105,73 @@ The earlier version of the pipeline ran the same eight stages in the same
 order on every input. That is a *fixed* workflow — the LLM only authors
 text inside each stage. To meet the deliverable's "Selecting among one or
 more tools / Deciding whether or not to use a tool" criterion, the
-synthesis stage was rewritten to use OpenAI tool-calling (`tool_choice:
-"auto"`) over three tools, with `MAX_TOOL_HOPS = 3`:
+synthesis stage was rewritten to use OpenAI tool-calling over three
+tools, with `MAX_TOOL_HOPS = 3`:
 
 | Tool                    | When the LLM tends to call it                                                                                                                                                                                       |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `lookup_competitors`    | When defensibility hinges on real competitors. Returns short factual descriptions for 1-5 names from the brief. The model is instructed to skip rather than guess.                                                |
+| `lookup_competitors`    | When defensibility hinges on real competitors. Returns short factual descriptions for 1-5 names from the brief. The model is instructed to skip rather than guess on briefs with no named competitors.            |
 | `search_uploaded_docs`  | When a specific claim could be supported or refuted by the founder's uploaded materials. Performs a pgvector cosine search over `embeddings` filtered by `owner_type='startup_upload'`. Returns `{ kind: "no_docs" }` if no embeddings exist for the startup. |
 | `get_prior_analyses`    | When this looks like a revision and the model should compare against earlier verdicts on the same `startup_id`. Returns an empty array on first analyses so the model knows to skip this critique angle.            |
 
-The system prompt explicitly tells the model *"Calling tools is optional.
-Most syntheses do not need any."* — the choice is real, not forced. We see
-in the persisted traces (see below) that the model:
+### Tool-choice policy by run-type
 
-- skips all tools on tight, well-formed briefs;
-- often calls `search_uploaded_docs` only after seeing an upload exists;
-- calls `lookup_competitors` mostly for `no_moat` / clone-risk scenarios
-  where the analyst critic flagged defensibility as the load-bearing
-  concern;
-- calls `get_prior_analyses` on the second analysis of a startup but
-  almost never on the first.
+The synthesis system prompt is now **dynamic per run-type**
+(`buildSynthesisSystemPrompt(runType)` in `lib/analysis/pipeline.ts`) and
+the first hop's `tool_choice` is set per run-type by passing
+`initialToolChoice` into `completeJsonWithTools`:
+
+| Run type           | First hop `tool_choice` | Prompt language                                                                                                  |
+| ------------------ | ----------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `quick_roast`      | n/a — bypasses synthesis | Single-pass critic, no committee, no tools.                                                                      |
+| `committee`        | `"required"`            | "You are EXPECTED to use tools. At minimum, call `get_prior_analyses()` …"                                       |
+| `deep` (stress test) | `"required"`            | "This is a DEEP STRESS TEST. Skipping tools entirely on a deep run is a quality failure."                        |
+
+After the first hop the loop falls back to `tool_choice: "auto"` so the
+model can terminate naturally rather than being forced into a runaway
+tool spiral. This is implemented as a one-line policy inside
+`completeJsonWithTools`:
+
+```ts
+const toolChoice =
+  hop === 0 && opts.initialToolChoice === "required" ? "required" : "auto";
+```
+
+The result is a hybrid: the *first* tool call is mandated for every
+deliverable-relevant run (so the agentic-tool-calling deliverable is
+satisfied on every committee and deep analysis), but the model still
+makes genuine decisions about *which* tools to call, with what
+arguments, and whether to call additional tools after the mandatory
+first one.
+
+### What the model still chooses
 
 Each invocation is recorded as a separate `analysis_traces` row with
-`stage='tool:<name>'` and the JSON arguments the model produced. This makes
-the agentic behavior auditable per run.
+`stage='tool:<name>'` and the JSON arguments the model produced. Across
+real runs the persisted traces show:
 
-The system is *meaningfully* agentic rather than fixed because:
+1. The model nearly always reaches first for `get_prior_analyses` — the
+   safe baseline that grounds the report in whether this is a first
+   pass or an iteration.
+2. `lookup_competitors` is called when the brief lists ≥1 specific
+   company name. The model passes the actual names from the brief, not
+   hallucinated category labels (this was a real bug fixed in
+   prompt-engineering — see below).
+3. `search_uploaded_docs` is called only when a founder has uploaded
+   materials and the brief mentions a specific testable claim; it
+   returns `{ kind: "no_docs" }` early otherwise so the loop terminates
+   cheaply.
+4. The output materially changes between runs as a result — uploads
+   change the verdict toward "Weak wedge" instead of "Likely dead" when
+   the docs refute a committee concern.
 
-1. The model decides whether to call any tool at all (it often doesn't).
-2. The model decides which subset of three tools to call.
-3. The model decides what arguments to pass (e.g. the names from the brief
-   rather than hallucinated ones; query strings derived from the specific
-   committee critique it wants to ground).
-4. The output materially changes between runs as a result — uploads change
-   the verdict toward "Weak wedge" instead of "Likely dead" when the docs
-   refute a committee concern.
+So the system is *meaningfully* agentic rather than fixed because:
+
+- The model decides which subset of the three tools to call (the
+  forcing only requires *one* tool on hop 0; the rest is autonomous).
+- The model decides what arguments to pass.
+- The model decides whether to make additional hops or terminate.
+- The output materially differs as a function of those decisions.
 
 ### Live agentic-loop demo (real OpenAI calls)
 
@@ -146,7 +187,8 @@ It feeds the synthesis agent two hand-crafted briefs in sequence and
 prints every tool decision the model made, plus latency and the final
 verdict. Source: [`scripts/demo-agentic.ts`](../scripts/demo-agentic.ts).
 
-A representative transcript (gpt-4o-mini, April 2026):
+A representative transcript (gpt-4o-mini, April 2026, run with
+`tool_choice: "auto"` to highlight the model's autonomous choice):
 
 | Brief                                          | Tool calls | Tool args (model-chosen)                              | Verdict                                                 | Latency  |
 | ---------------------------------------------- | ---------- | ----------------------------------------------------- | ------------------------------------------------------- | -------- |
@@ -157,6 +199,16 @@ Same code, same model, same available tools — opposite decisions. The
 4× latency gap and the choice of tool args (real company names from the
 brief, not invented categories) confirm the model is making genuine
 runtime decisions about when grounding is worth its latency cost.
+
+> **Note on production behavior.** The demo above runs the synthesis
+> agent with `tool_choice: "auto"` to demonstrate raw model autonomy.
+> The deployed pipeline forces `tool_choice: "required"` on the first
+> hop for committee and deep runs to guarantee the agentic-tool-calling
+> deliverable is satisfied on every customer-facing analysis. After the
+> mandatory first hop the loop relaxes back to `"auto"`, so on a brief
+> like the roofing wedge above the production run will still pick
+> `get_prior_analyses` (cheap, no-op on first runs) and then terminate
+> rather than chain into hallucinated competitor lookups.
 
 This live run also surfaced a real prompt-engineering bug during
 development: an earlier version of the `lookup_competitors` description
@@ -180,6 +232,9 @@ Reflection section.
 | Schema validation| `zod`                                   | Same Zod schemas validate request bodies, LLM output, and DB row shapes — single source of truth.                                  |
 | Billing          | Stripe Checkout + webhook                | Hosted checkout means we never touch card data; webhook flips `users_profile.plan_tier` on `customer.subscription.updated`.       |
 | Hosting          | Vercel                                  | Native Next.js fit; per-route `maxDuration = 300s` covers the longest committee run; preview deploys for PRs.                      |
+| Background work  | `@vercel/functions` `waitUntil`         | Vercel terminates serverless functions the moment the HTTP response returns. `/api/analyze` returns the `analysisId` immediately and registers the long-running pipeline with `waitUntil(...)` so the function stays alive until the job settles. Without this, analyses sat in `queued` forever in production. |
+| PDF text extract | `unpdf`                                 | `pdf-parse` ships sample test data, runs a debug code path at module load that crashes on Vercel, and pulls in heavy worker bundles that exhausted the serverless memory budget (~311 MB OOMs). `unpdf` is a dependency-free serverless-friendly fork of pdfjs and works under `serverComponentsExternalPackages`. |
+| PDF *export*     | `window.print()` + `@media print` CSS   | A native print dialog gives users selectable, vector-quality "Save as PDF" with zero added dependencies and no serverless cost. Server-side puppeteer would have re-introduced the same OOM class of problem we just fixed. |
 | Tracing storage  | Postgres table (`analysis_traces`)      | No third-party SaaS to add; queryable from the app; cascades cleanly on `analyses` deletion.                                       |
 
 ## e. Observability
@@ -323,11 +378,29 @@ Practical constraints:
 - Per-route `maxDuration = 300s` on `/api/analyze` is sufficient for
   committee runs but is the binding limit; longer "deep" mode would need
   to move to a queue (e.g. Vercel cron + Postgres job table).
+- The pipeline body itself runs *after* the HTTP response returns and is
+  kept alive by `waitUntil` from `@vercel/functions`. This is required —
+  without it, Vercel terminates the function the moment the response is
+  sent and the analysis stays stuck in `queued` indefinitely. Confirmed
+  by progress-bar failure and Vercel runtime logs showing zero further
+  pipeline activity after the initial `INSERT`.
 - pgvector queries currently fall back to in-memory cosine if the
   `match_startup_embeddings` SQL function is missing; performance is fine
   up to the 60-chunk-per-upload cap.
 - Embeddings are written best-effort on upload; if the OpenAI quota
   rejects, the synthesis tool gracefully reports `no_docs`.
+- PDF text extraction in `/api/startups/parse` and `/api/uploads` uses
+  `unpdf` and must be listed in
+  `next.config.mjs → experimental.serverComponentsExternalPackages` so
+  webpack does not try to inline the bundled pdfjs worker. Failing to
+  do this manifested as 502s with "Fluid ↓ 311 MB" memory traces in
+  production logs.
+- Deletes propagate via `on delete cascade` from `analyses` to
+  `analysis_traces`, `analysis_scores`, and `analysis_sections`.
+  Ownership for `DELETE /api/analyses/[id]` is enforced by the existing
+  RLS policy `analyses_all_own` on the user-scoped Supabase client — a
+  delete by a non-owner is filtered to zero rows and returns 404
+  without leaking existence.
 
 ## i. Reflection
 
@@ -338,6 +411,28 @@ Practical constraints:
   `lookup_competitors` was being called even on briefs with no real
   competitors because the description didn't say "do not guess". The
   current description does, and call rates dropped to the right pattern.
+- *"Optional tools" can quietly become "no tools" in production.* The
+  initial committee prompt told the model "calling tools is optional"
+  and the model honored that almost too well — committee runs were
+  shipping with zero tool calls in the trace, silently breaking the
+  agentic-tool-calling deliverable. The fix was a hybrid: force
+  `tool_choice: "required"` on the first hop (so the deliverable is
+  always satisfied) but relax to `"auto"` after, so the model still
+  decides on follow-up hops. Lesson: deliverable-critical agent
+  behavior needs an enforcement floor, not just a prompt nudge.
+- *Vercel serverless functions die the instant the HTTP response
+  returns, which silently kills any background `await` you started.*
+  This was the root cause of analyses sticking in `queued` in
+  production despite working perfectly locally. `@vercel/functions`'
+  `waitUntil` is the right primitive — register the pipeline promise
+  with it before returning the response, and Vercel keeps the function
+  warm until it settles. Local dev never surfaces this because Node
+  doesn't impose the same lifecycle.
+- *PDF parsing is a serverless minefield.* `pdf-parse` worked locally,
+  exhausted memory on Vercel, and silently 502'd. `unpdf` plus a
+  `serverComponentsExternalPackages: ["unpdf"]` entry was the only
+  combination that survived the Vercel build *and* runtime. Worth
+  picking serverless-friendly libraries from the start.
 - *Persisted traces pay for themselves on the first failure.* The hour
   spent building `analysis_traces` saved several hours of "why did the
   committee disagree on this run?" debugging by giving a chronological
@@ -348,12 +443,19 @@ Practical constraints:
 
 **What I would change with more time.**
 
-- Move pipeline execution to a background worker (Vercel cron + a `jobs`
-  table) so the API route is no longer load-bearing on `maxDuration` and
-  so we can run "deep" mode (12-stage) within budget.
+- Move pipeline execution to a real background worker (Vercel cron + a
+  `jobs` table) instead of `waitUntil` so the API route is no longer
+  load-bearing on `maxDuration` and so we can run a longer "deep" mode
+  within budget. `waitUntil` was the right unblock, but a queue is the
+  right architecture.
 - Replace the per-call OpenAI invocation with a streaming response so
-  the report renders progressively rather than the user staring at a
-  3-minute spinner. This is mostly a UI rewrite.
+  the report renders progressively rather than the user staring at the
+  current polling-based progress bar. This is mostly a UI rewrite.
+- Re-tighten the plan-tier gate (revert
+  `FEATURES_UNLOCKED_FOR_FREE_USERS = true` and the credit-default
+  migration) once the deliverable evaluation window closes, then wire
+  Stripe-customer-portal links into `/settings` so users can self-serve
+  cancellations.
 - Add a richer eval harness with LLM-as-judge scoring for the
   qualitative dimensions (verdict sharpness, survive-reason specificity)
   in addition to the rule-based checks. The current rule set catches
