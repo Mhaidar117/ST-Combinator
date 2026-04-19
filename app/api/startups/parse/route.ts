@@ -4,6 +4,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { extractTextFromBuffer } from "@/lib/uploads/extract";
 import { completeJson } from "@/lib/openai/client";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const ALLOWED = new Set([
@@ -34,66 +36,99 @@ const parsedStartupSchema = z.object({
 export type ParsedStartup = z.infer<typeof parsedStartupSchema>;
 
 export async function POST(req: Request) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const form = await req.formData().catch(() => null);
-  const file = form?.get("file");
-  if (!(file instanceof File)) {
-    return NextResponse.json(
-      { error: "Missing file (multipart form field 'file')" },
-      { status: 400 },
-    );
-  }
-
-  const mime = file.type || "application/octet-stream";
-  if (!ALLOWED.has(mime)) {
-    return NextResponse.json(
-      { error: `Unsupported file type: ${mime}. Use PDF, TXT, or MD.` },
-      { status: 400 },
-    );
-  }
-
-  if (file.size > 10 * 1024 * 1024) {
-    return NextResponse.json(
-      { error: "File too large (max 10 MB)" },
-      { status: 400 },
-    );
-  }
-
-  const buf = Buffer.from(await file.arrayBuffer());
-  const extracted = await extractTextFromBuffer(buf, mime);
-  if (!extracted.text || extracted.text.length < 50) {
-    return NextResponse.json(
-      {
-        error:
-          extracted.error ??
-          "Could not extract enough text from this file. Try a different PDF.",
-      },
-      { status: 422 },
-    );
-  }
-
+  // Wrap the ENTIRE handler so any unexpected throw becomes a structured 500
+  // instead of letting Vercel return a bare 502 with no useful info.
   try {
-    const parsed = await completeJson({
-      system:
-        "You extract structured startup-pitch metadata from founder documents. Output JSON only. Use null for fields the document does not cover; never invent details.",
-      user: buildPrompt(extracted.text),
-      schema: parsedStartupSchema,
+    console.log("[parse] start");
+
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      console.log("[parse] unauthorized");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    console.log("[parse] user ok", user.id);
+
+    const form = await req.formData().catch((e) => {
+      console.log("[parse] formData failed", e);
+      return null;
     });
-    return NextResponse.json({ parsed, charCount: extracted.text.length });
+    const file = form?.get("file");
+    if (!(file instanceof File)) {
+      return NextResponse.json(
+        { error: "Missing file (multipart form field 'file')" },
+        { status: 400 },
+      );
+    }
+    console.log("[parse] file received", {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+    });
+
+    const mime = file.type || "application/octet-stream";
+    if (!ALLOWED.has(mime)) {
+      return NextResponse.json(
+        { error: `Unsupported file type: ${mime}. Use PDF, TXT, or MD.` },
+        { status: 400 },
+      );
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: "File too large (max 10 MB)" },
+        { status: 400 },
+      );
+    }
+
+    const buf = Buffer.from(await file.arrayBuffer());
+    console.log("[parse] buf bytes", buf.length);
+
+    const extracted = await extractTextFromBuffer(buf, mime);
+    console.log("[parse] extracted chars", extracted.text.length, "err?", extracted.error);
+
+    if (!extracted.text || extracted.text.length < 50) {
+      return NextResponse.json(
+        {
+          error:
+            extracted.error ??
+            "Could not extract enough text from this file. Try a different PDF.",
+        },
+        { status: 422 },
+      );
+    }
+
+    try {
+      const parsed = await completeJson({
+        system:
+          "You extract structured startup-pitch metadata from founder documents. Output JSON only. Use null for fields the document does not cover; never invent details.",
+        user: buildPrompt(extracted.text),
+        schema: parsedStartupSchema,
+      });
+      console.log("[parse] llm ok");
+      return NextResponse.json({ parsed, charCount: extracted.text.length });
+    } catch (e) {
+      console.log("[parse] llm failed", e);
+      return NextResponse.json(
+        {
+          error:
+            e instanceof Error ? e.message : "Could not parse document with LLM",
+        },
+        { status: 502 },
+      );
+    }
   } catch (e) {
+    console.error("[parse] fatal", e);
     return NextResponse.json(
       {
         error:
-          e instanceof Error ? e.message : "Could not parse document with LLM",
+          e instanceof Error
+            ? `${e.name}: ${e.message}`
+            : "Unexpected server error in /api/startups/parse",
       },
-      { status: 502 },
+      { status: 500 },
     );
   }
 }
